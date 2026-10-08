@@ -1,3 +1,4 @@
+
 @import "tailwindcss";
 
 :root {
@@ -5,22 +6,18 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.admin-shell :is(a, button, input, select):focus-visible { outline: 2px solid #0987F5; outline-offset: 3px; }
+@layer components {
+  .admin-primary { @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[#0879dc] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#06325E]; }
+  .admin-secondary { @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#06325E] hover:bg-slate-50; }
+  .admin-icon { @apply flex size-10 shrink-0 items-center justify-center rounded-lg; }
+}
+
+.admin-shell button:disabled { cursor: not-allowed; opacity: 0.5; }
+dialog :is(a, button):focus-visible { outline: 2px solid #0987F5; outline-offset: 3px; }
