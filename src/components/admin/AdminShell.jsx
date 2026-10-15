@@ -6,12 +6,16 @@ import {
   Bell,
   ChevronRight,
   Layers,
+  LogOut,
   Menu,
   Search,
-  UserRound,
+  ArrowRight,
   X,
 } from "lucide-react";
 import { navigation, pageLabel } from "./navigation";
+import ProfileDropdown from "../auth/ProfileDropdown";
+import TenantSwitcher from "../tenants/TenantSwitcher";
+import { logout } from "../../app/login/actions";
 export default function AdminShell({ children }) {
   const pathname = usePathname(),
     router = useRouter();
@@ -29,7 +33,7 @@ export default function AdminShell({ children }) {
       if (event.key === "Escape") setOpen(false);
       if (event.key === "Tab") {
         const controls = dialog.current.querySelectorAll(
-          "a[href], button:not([disabled])",
+          "a[href], button:not([disabled]), select:not([disabled])",
         );
         const first = controls[0],
           last = controls[controls.length - 1];
@@ -68,7 +72,7 @@ export default function AdminShell({ children }) {
         </div>
         {mobile && (
           <button
-            className="admin-icon ml-auto"
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg ml-auto"
             onClick={() => setOpen(false)}
             aria-label="Close navigation"
           >
@@ -76,6 +80,7 @@ export default function AdminShell({ children }) {
           </button>
         )}
       </div>
+      <TenantSwitcher mobile={mobile} />
       <p className="px-6 pb-3 pt-6 text-[11px] font-bold tracking-[0.18em] text-slate-400">
         WORKSPACE
       </p>
@@ -118,26 +123,32 @@ export default function AdminShell({ children }) {
           );
         })}
       </nav>
-      <div className="mx-5 mt-auto mb-6 rounded-xl border border-blue-100 bg-[#F5FAFF] p-4">
+      <div className="mx-5 mt-auto mb-4 rounded-xl border border-blue-100 bg-[#F5FAFF] p-4">
         <p className="text-sm font-semibold">Your workspace, simplified.</p>
         <p className="mt-2 text-xs leading-5 text-slate-500">
           Manage your content and keep your websites up to date.
         </p>
         <p className="mt-3 text-[11px] text-slate-500">
-          Mock data · Browser storage
+          Manage your branches and websites
         </p>
       </div>
+      <form action={logout} className="border-t border-slate-100 px-3 py-4">
+        <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-red-50 hover:text-red-600">
+          <LogOut size={19} aria-hidden="true" />
+          Sign out
+        </button>
+      </form>
     </>
   );
   return (
-    <div className="admin-shell min-h-screen bg-[#F5FAFF] text-[#06325E]">
+    <div className="[&_:is(a,button):focus-visible]:outline-2 [&_:is(a,button):focus-visible]:outline-solid [&_:is(a,button):focus-visible]:outline-[#0987F5] [&_:is(a,button):focus-visible]:outline-offset-3 [&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-50 min-h-screen bg-[#F5FAFF] text-[#06325E]">
       <a
         href="#admin-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:bg-white focus:p-3"
       >
         Skip to content
       </a>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto border-r border-slate-200 bg-white lg:flex">
         {sidebar()}
       </aside>
       {open && (
@@ -159,10 +170,10 @@ export default function AdminShell({ children }) {
         </div>
       )}
       <div className="lg:pl-64" inert={open ? true : undefined}>
-        <header className="flex min-h-20 flex-wrap items-center gap-4 border-b border-slate-200 bg-white px-4 py-4 sm:px-8">
+        <header className="sticky top-0 z-20 flex min-h-20 flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-4 sm:gap-4 sm:px-6 lg:px-8">
           <button
             ref={toggle}
-            className="admin-icon lg:hidden"
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg lg:hidden"
             aria-label="Open navigation"
             aria-expanded={open}
             onClick={() => setOpen(true)}
@@ -171,7 +182,7 @@ export default function AdminShell({ children }) {
           </button>
           <nav
             aria-label="Breadcrumb"
-            className="flex min-w-0 flex-wrap items-center gap-2 text-sm"
+            className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-xs sm:flex-none sm:text-sm"
           >
             <Link href="/dashboard" className="text-slate-500">
               Workspace
@@ -192,7 +203,7 @@ export default function AdminShell({ children }) {
           </nav>
           <form
             role="search"
-            className="order-last flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 sm:order-none sm:ml-auto sm:w-60"
+            className="group order-last flex h-11 w-full items-center gap-2.5 rounded-xl border border-slate-200/80 bg-slate-50 pl-3.5 pr-1.5 transition focus-within:border-slate-400 focus-within:bg-white md:order-none md:ml-auto md:w-56 xl:w-72"
             onSubmit={(event) => {
               event.preventDefault();
               router.push(
@@ -202,39 +213,52 @@ export default function AdminShell({ children }) {
           >
             <Search
               size={17}
-              className="shrink-0 text-slate-400"
+              className="shrink-0 text-slate-400 transition group-focus-within:text-slate-600"
               aria-hidden="true"
             />
             <input
+              type="text"
+              autoComplete="off"
               aria-label="Search websites"
               placeholder="Search websites…"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="min-w-0 flex-1 bg-transparent py-2 text-sm text-slate-700 ring-0 outline-none placeholder:text-slate-400 focus:ring-0"
+              className="h-full min-w-0 flex-1 border-0 bg-transparent! text-sm text-slate-700 ring-0 outline-none placeholder:text-slate-400 focus:bg-transparent! focus:ring-0"
             />
-            <button className="text-xs font-semibold text-blue-600">Go</button>
+            {query && (
+              <button
+                type="button"
+                aria-label="Clear header search"
+                onClick={() => setQuery("")}
+                className="flex size-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-200/60 hover:text-slate-700 focus-visible:outline-none! focus-visible:bg-slate-200"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            )}
+            <button
+              type="submit"
+              aria-label="Search websites"
+              title="Search websites"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none! focus-visible:bg-slate-200"
+            >
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
           </form>
-          <div className="ml-auto flex items-center gap-3 sm:ml-0">
+          <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0 sm:gap-3">
             <span
-              className="admin-icon text-slate-400"
+              className="flex size-10 shrink-0 items-center justify-center rounded-lg text-slate-400"
               title="Notifications coming soon"
               aria-label="Notifications coming soon"
             >
               <Bell size={19} />
             </span>
-            <span
-              className="flex size-9 items-center justify-center rounded-full bg-blue-50"
-              title="User profile placeholder"
-              aria-label="User profile placeholder"
-            >
-              <UserRound size={18} />
-            </span>
+            <ProfileDropdown />
           </div>
         </header>
         <div
           id="admin-content"
           tabIndex={-1}
-          className="mx-auto max-w-[1440px] p-4 sm:p-8 lg:p-10"
+          className="w-full min-w-0 p-4 sm:p-6 lg:p-8"
         >
           {children}
         </div>

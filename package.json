@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:sites": "node --test tests/site-service.test.mjs"
+    "test:api": "node --test tests/api.test.mjs",
+    "test:auth": "node --test tests/auth.test.mjs",
+    "test:tenants": "node --test tests/tenants.test.mjs tests/branch-management.test.mjs tests/tenant-service.test.mjs",
+    "test:sites": "node --test tests/site-service.test.mjs tests/website-api.test.mjs tests/site-list-loader.test.mjs",
+    "test:builder": "node --test tests/builder.test.mjs",
+    "test:pages": "node --test tests/page-api.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.53.0",

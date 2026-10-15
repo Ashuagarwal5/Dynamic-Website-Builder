@@ -18,39 +18,62 @@ export default function PublicWebsitePage() {
 }
 function PublicWebsiteRoute() {
   const { slug } = useParams();
-  const preview = useSearchParams().get("preview") === "1";
+  const params = useSearchParams();
+  const preview = params.get("preview") === "1";
+  const requestedScope = params.get("workspace");
+  const scope = requestedScope?.startsWith("site-studio-sites:")
+    ? requestedScope
+    : undefined;
   return (
     <PublicWebsiteContent
-      key={`${slug}-${preview}`}
+      key={`${slug}-${preview}-${scope}`}
       slug={slug}
       preview={preview}
+      scope={scope}
     />
   );
 }
-function PublicWebsiteContent({ slug, preview }) {
+function PublicWebsiteContent({ slug, preview, scope }) {
   const [site, setSite] = useState(undefined),
     [error, setError] = useState(null);
   const reload = () => {
     setError(null);
-    getSite(slug).then(setSite).catch(setError);
+    getSite(slug, scope).then(setSite).catch(setError);
   };
   useEffect(() => {
     let active = true;
-    getSite(slug)
-      .then((record) => {
-        if (active) setSite(record);
-      })
-      .catch((problem) => {
-        if (active) setError(problem);
-      });
+    function load() {
+      getSite(slug, scope)
+        .then((record) => {
+          if (active) {
+            setSite(record);
+            setError(null);
+          }
+        })
+        .catch((problem) => {
+          if (active) setError(problem);
+        });
+    }
+    function changed(event) {
+      if (
+        event.key === null ||
+        event.key === (scope || "dynamic-builder-sites-v1")
+      )
+        load();
+    }
+    load();
+    window.addEventListener("storage", changed);
+    window.addEventListener("focus", load);
     return () => {
       active = false;
+      window.removeEventListener("storage", changed);
+      window.removeEventListener("focus", load);
     };
-  }, [slug]);
+  }, [slug, scope]);
   if (error)
     return (
       <div className="mx-auto max-w-3xl p-8">
-        <ServiceError error={error} onRetry={reload} />
+        <ServiceError error={error} onRetry={reload} scope={scope} />
       </div>
     );
   if (site === undefined)
@@ -70,11 +93,8 @@ function PublicWebsiteContent({ slug, preview }) {
       {preview && (
         <div className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3 bg-amber-100 px-5 py-3 text-sm font-semibold text-amber-900">
           <span>Draft preview - changes are not publicly published</span>
-          <Link
-            href={`/dashboard/sites/${encodeURIComponent(slug)}`}
-            className="underline"
-          >
-            Back to editor
+          <Link href="/dashboard/websites" className="underline">
+            Back to websites
           </Link>
         </div>
       )}

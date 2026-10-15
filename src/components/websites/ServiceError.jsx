@@ -1,11 +1,14 @@
 ﻿"use client";
 import { useState } from "react";
 import { exportSavedSites } from "../../lib/site-service";
-export default function ServiceError({ error, onRetry }) {
+import { useSession } from "../auth/SessionProvider";
+export default function ServiceError({ error, onRetry, scope: explicitScope }) {
+  const session = useSession();
+  const scope = explicitScope || session?.websiteScope;
   const [backupError, setBackupError] = useState("");
   async function download() {
     try {
-      const raw = await exportSavedSites();
+      const raw = await exportSavedSites(scope);
       const url = URL.createObjectURL(
         new Blob([raw], { type: "application/json" }),
       );
@@ -26,12 +29,20 @@ export default function ServiceError({ error, onRetry }) {
       <p>{error.message || "Unable to load websites. Please retry."}</p>
       <div className="mt-4 flex flex-wrap gap-3">
         {onRetry && (
-          <button type="button" onClick={onRetry} className="admin-secondary">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#06325E] hover:bg-slate-50"
+          >
             Retry
           </button>
         )}
         {error.code === "CORRUPT_STORAGE" && (
-          <button type="button" onClick={download} className="admin-secondary">
+          <button
+            type="button"
+            onClick={download}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#06325E] hover:bg-slate-50"
+          >
             Download saved data backup
           </button>
         )}

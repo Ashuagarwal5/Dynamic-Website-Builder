@@ -1,7 +1,9 @@
 ﻿"use client";
 import { useEffect, useRef, useState } from "react";
 import { deleteSite } from "../../lib/site-service";
+import { useSession } from "../auth/SessionProvider";
 export default function DeleteWebsiteDialog({ site, onClose, onDeleted }) {
+  const scope = useSession()?.websiteScope;
   const dialog = useRef(null),
     lock = useRef(false);
   const [busy, setBusy] = useState(false),
@@ -17,7 +19,7 @@ export default function DeleteWebsiteDialog({ site, onClose, onDeleted }) {
     setBusy(true);
     setError("");
     try {
-      await deleteSite(site.slug);
+      await deleteSite(site.slug, scope);
       await onDeleted(site);
     } catch (problem) {
       setError(problem.message);
@@ -44,8 +46,7 @@ export default function DeleteWebsiteDialog({ site, onClose, onDeleted }) {
         className="mt-4 break-words text-sm leading-6 text-slate-600"
       >
         Deleting <strong>{site.name}</strong> removes this website and its draft
-        and published content from the saved mock data in this browser. This
-        cannot be undone.
+        and published content. This cannot be undone.
       </p>
       {error && (
         <p role="alert" className="mt-4 text-sm text-red-700">
@@ -57,7 +58,7 @@ export default function DeleteWebsiteDialog({ site, onClose, onDeleted }) {
           autoFocus
           disabled={busy}
           type="button"
-          className="admin-secondary"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#06325E] hover:bg-slate-50"
           onClick={onClose}
         >
           Cancel

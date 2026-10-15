@@ -20,6 +20,8 @@ const service = await import(moduleUrl(source));
 const validation = await import(validationUrl);
 const { initialSites } = await import(mockUrl);
 const key = "dynamic-builder-sites-v1";
+const { websiteScope, migrateLegacyWebsites, siteViewUrl } =
+  await import("../src/lib/demo-workspace.js");
 let raw = null,
   writes = 0,
   failWrite = false;
@@ -53,26 +55,48 @@ const rejectsCode = (promise, code) =>
   );
 
 test("website service preserves content and manages the complete browser collection", async (t) => {
-  await t.test("sample data and service import without secure-context structuredClone", async () => {
-    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "structuredClone");
-    Object.defineProperty(globalThis, "structuredClone", { configurable: true, value: undefined });
-    try {
-      const isolatedMockUrl = mockUrl + "#non-secure-origin";
-      const { initialSites: seeded, mockSites: examples } = await import(isolatedMockUrl);
-      await import(moduleUrl(source.replace(JSON.stringify(mockUrl), JSON.stringify(isolatedMockUrl))));
-      assert.equal(seeded.length, 2);
-      assert.equal(seeded[0].name, "ABC Dental");
-      assert.equal(seeded[1].name, "XYZ Clinic");
-      assert.deepEqual(seeded[0].live, seeded[0].draft);
-      assert.notEqual(seeded[0].live, seeded[0].draft);
-      assert.notEqual(seeded[0].live.hero, seeded[0].draft.hero);
-      seeded[0].live.hero.heading = "Independent published snapshot";
-      assert.equal(examples[0].draft.hero.heading, "Healthy Smiles Start Here");
-    } finally {
-      if (descriptor) Object.defineProperty(globalThis, "structuredClone", descriptor);
-      else delete globalThis.structuredClone;
-    }
-  });
+  await t.test(
+    "sample data and service import without secure-context structuredClone",
+    async () => {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        globalThis,
+        "structuredClone",
+      );
+      Object.defineProperty(globalThis, "structuredClone", {
+        configurable: true,
+        value: undefined,
+      });
+      try {
+        const isolatedMockUrl = mockUrl + "#non-secure-origin";
+        const { initialSites: seeded, mockSites: examples } = await import(
+          isolatedMockUrl
+        );
+        await import(
+          moduleUrl(
+            source.replace(
+              JSON.stringify(mockUrl),
+              JSON.stringify(isolatedMockUrl),
+            ),
+          )
+        );
+        assert.equal(seeded.length, 2);
+        assert.equal(seeded[0].name, "ABC Dental");
+        assert.equal(seeded[1].name, "XYZ Clinic");
+        assert.deepEqual(seeded[0].live, seeded[0].draft);
+        assert.notEqual(seeded[0].live, seeded[0].draft);
+        assert.notEqual(seeded[0].live.hero, seeded[0].draft.hero);
+        seeded[0].live.hero.heading = "Independent published snapshot";
+        assert.equal(
+          examples[0].draft.hero.heading,
+          "Healthy Smiles Start Here",
+        );
+      } finally {
+        if (descriptor)
+          Object.defineProperty(globalThis, "structuredClone", descriptor);
+        else delete globalThis.structuredClone;
+      }
+    },
+  );
   await t.test("browser APIs never run on the server", async () => {
     delete globalThis.window;
     await rejectsCode(service.listSites(), "CLIENT_ONLY");
@@ -378,5 +402,122 @@ test("website service preserves content and manages the complete browser collect
       else delete globalThis.crypto;
     },
   );
+  delete globalThis.window;
+});
+
+test("branch workspaces isolate CRUD, themes, publishing, and queued writes", async () => {
+  const data = new Map();
+  globalThis.window = {
+    localStorage: {
+      getItem: (name) => data.get(name) ?? null,
+      setItem: (name, value) => data.set(name, value),
+    },
+  };
+  const jaipur = websiteScope("user-a", "demo", "draft-jaipur");
+  const ajmer = websiteScope("user-a", "demo", "draft-ajmer");
+  const anotherUser = websiteScope("user-b", "demo", "draft-jaipur");
+  assert.deepEqual(await service.listSites(jaipur), []);
+  await Promise.all([
+    service.createSite(details, jaipur),
+    service.createSite(details, ajmer),
+  ]);
+  assert.deepEqual(await service.listSites(anotherUser), []);
+  const original = await service.getSite(details.slug, ajmer);
+  const draft = (await service.getSite(details.slug, jaipur)).draft;
+  draft.theme.primary = "#ff0000";
+  draft.hero.heading = "Jaipur branch";
+  await service.saveDraft(details.slug, draft, jaipur);
+  await service.publishSite(details.slug, jaipur);
+  assert.equal(
+    (await service.getSite(details.slug, jaipur)).live.hero.heading,
+    "Jaipur branch",
+  );
+  assert.deepEqual(await service.getSite(details.slug, ajmer), original);
+  await service.updateSiteSettings(
+    details.slug,
+    { name: "Jaipur renamed" },
+    jaipur,
+  );
+  assert.equal((await service.getSite(details.slug, ajmer)).name, details.name);
+  await service.duplicateSite(details.slug, jaipur);
+  assert.equal((await service.listSites(jaipur)).length, 2);
+  assert.equal((await service.listSites(ajmer)).length, 1);
+  await service.deleteSite(details.slug, jaipur);
+  assert.ok(await service.getSite(details.slug, ajmer));
+  assert.equal((await service.listSites(jaipur)).length, 1);
+  assert.equal(JSON.parse(await service.exportSavedSites(ajmer)).length, 1);
+  const url = new URL(
+    siteViewUrl(details.slug, true, ajmer),
+    "http://localhost",
+  );
+  assert.equal(url.searchParams.get("workspace"), ajmer);
+  assert.equal(url.searchParams.get("preview"), "1");
+  delete globalThis.window;
+});
+
+test("unpublishing preserves drafts, isolates branches, and supports publishing again", async () => {
+  const data = new Map();
+  globalThis.window = {
+    localStorage: {
+      getItem: (name) => data.get(name) ?? null,
+      setItem: (name, value) => data.set(name, value),
+    },
+  };
+  const scope = websiteScope("user-a", "demo", "draft-ajmer");
+  const other = websiteScope("user-a", "demo", "draft-jaipur");
+  await service.createSite(details, scope);
+  await service.createSite(details, other);
+  await service.publishSite(details.slug, scope);
+  const otherSite = await service.publishSite(details.slug, other);
+  const draft = (await service.getSite(details.slug, scope)).draft;
+  draft.hero.heading = "Latest saved draft";
+  await service.saveDraft(details.slug, draft, scope);
+  const unpublished = await service.unpublishSite(details.slug, scope);
+  assert.equal(unpublished.published, false);
+  assert.equal(unpublished.live, null);
+  assert.deepEqual(unpublished.draft, draft);
+  assert.deepEqual(await service.getSite(details.slug, other), otherSite);
+  const refreshed = await service.getSite(details.slug, scope);
+  assert.equal(refreshed.published, false);
+  assert.equal(
+    (await service.unpublishSite(details.slug, scope)).published,
+    false,
+  );
+  const republished = await service.publishSite(details.slug, scope);
+  assert.equal(republished.published, true);
+  assert.deepEqual(republished.live, draft);
+  const bytes = data.get(scope);
+  window.localStorage.setItem = () => {
+    throw new Error("quota");
+  };
+  await rejectsCode(
+    service.unpublishSite(details.slug, scope),
+    "STORAGE_WRITE",
+  );
+  assert.equal(data.get(scope), bytes);
+  assert.equal((await service.getSite(details.slug, scope)).published, true);
+  await rejectsCode(service.unpublishSite("missing", scope), "NOT_FOUND");
+  delete globalThis.window;
+});
+
+test("legacy websites migrate once with their original bytes preserved", async () => {
+  const data = new Map([[key, JSON.stringify(initialSites)]]);
+  globalThis.window = {
+    localStorage: {
+      getItem: (name) => data.get(name) ?? null,
+      setItem: (name, value) => data.set(name, value),
+    },
+  };
+  const original = data.get(key);
+  const scope = websiteScope("user-a", "backend", "primary");
+  migrateLegacyWebsites("user-a", "primary");
+  assert.equal(data.get(scope), original);
+  assert.equal(data.get(key), original);
+  migrateLegacyWebsites("user-b", "primary");
+  assert.equal(data.has(websiteScope("user-b", "backend", "primary")), false);
+  await service.deleteSite(initialSites[0].slug, scope);
+  migrateLegacyWebsites("user-a", "primary");
+  assert.equal(await service.getSite(initialSites[0].slug, scope), null);
+  assert.equal(data.get(key), original);
   delete globalThis.window;
 });

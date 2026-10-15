@@ -32,7 +32,10 @@ export function EmptyState({ filtered = false }) {
           : "Create your first website to start building your online presence."}
       </p>
       {!filtered && (
-        <Link href="/dashboard/websites/new" className="admin-primary mt-6">
+        <Link
+          href="/dashboard/websites/new"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0879dc] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#06325E] mt-6"
+        >
           Create Website
         </Link>
       )}
@@ -47,7 +50,10 @@ export function NotFoundState() {
       <p className="mt-3 text-sm text-slate-500">
         This page or website is unavailable.
       </p>
-      <Link href="/dashboard/websites" className="admin-primary mt-6">
+      <Link
+        href="/dashboard/websites"
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0879dc] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#06325E] mt-6"
+      >
         Back to My Websites
       </Link>
     </div>

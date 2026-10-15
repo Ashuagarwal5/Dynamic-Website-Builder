@@ -17,8 +17,11 @@ import WebsiteTemplate from "../WebsiteTemplate";
 import WebsiteDetailsFields from "./WebsiteDetailsFields";
 import ServiceError from "./ServiceError";
 import { LoadingSkeleton } from "../admin/States";
+import { useSession } from "../auth/SessionProvider";
 
 export default function CreateWebsiteWizard() {
+  const session = useSession();
+  const scope = session?.websiteScope;
   const router = useRouter();
   const [step, setStep] = useState(1),
     [sites, setSites] = useState(null),
@@ -37,11 +40,11 @@ export default function CreateWebsiteWizard() {
     heading = useRef(null);
   const load = () => {
     setLoadError(null);
-    listSites().then(setSites).catch(setLoadError);
+    listSites(scope).then(setSites).catch(setLoadError);
   };
   useEffect(() => {
     let active = true;
-    listSites()
+    listSites(scope)
       .then((data) => {
         if (active) setSites(data);
       })
@@ -51,7 +54,7 @@ export default function CreateWebsiteWizard() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [scope]);
   useEffect(() => {
     heading.current?.focus();
   }, [step]);
@@ -67,7 +70,8 @@ export default function CreateWebsiteWizard() {
   }
   async function submit(event) {
     event.preventDefault();
-    if (lock.current || Object.keys(errors).length) return;
+    if (lock.current || !session?.activeBranch || Object.keys(errors).length)
+      return;
     if (step < 3) {
       setStep(step + 1);
       return;
@@ -76,13 +80,13 @@ export default function CreateWebsiteWizard() {
     setBusy(true);
     setError(null);
     try {
-      const site = await createSite(values);
+      const site = await createSite(values, scope);
       router.push(`/dashboard/sites/${encodeURIComponent(site.slug)}`);
     } catch (problem) {
       setError(problem);
       if (problem.fields?.slug) {
         setStep(1);
-        listSites().then(setSites).catch(setLoadError);
+        listSites(scope).then(setSites).catch(setLoadError);
       }
       lock.current = false;
       setBusy(false);
@@ -90,8 +94,23 @@ export default function CreateWebsiteWizard() {
   }
   if (loadError) return <ServiceError error={loadError} onRetry={load} />;
   if (!sites) return <LoadingSkeleton />;
+  if (!session?.activeBranch)
+    return (
+      <main className="rounded-2xl border border-slate-200 bg-white p-8">
+        <h1 className="text-2xl font-bold">Create a branch first</h1>
+        <p className="mt-3 text-sm text-slate-500">
+          Add a branch before creating its websites.
+        </p>
+        <Link
+          href="/dashboard/tenants/new"
+          className="mt-5 inline-flex rounded-lg bg-[#0987F5] px-4 py-3 text-sm font-semibold text-white"
+        >
+          Create branch
+        </Link>
+      </main>
+    );
   return (
-    <main className="mx-auto max-w-4xl">
+    <main className="w-full min-w-0">
       <Link
         href="/dashboard/websites"
         className="mb-6 inline-flex items-center gap-2 text-sm text-blue-700"
@@ -154,15 +173,15 @@ export default function CreateWebsiteWizard() {
                 }
               />
               <span className="flex-1">
-                <strong className="block">Business Template</strong>
+                <strong className="block">Business Essentials</strong>
                 <span className="text-xs text-slate-500">
-                  Hero, about, services, reviews and contact sections
+                  Hero, about, features, reviews, FAQ, gallery, CTA and contact
                 </span>
               </span>
               <CheckCircle2 size={20} className="text-blue-600" />
             </label>
             <p className="mb-3 text-xs text-slate-500">
-              Preview of the reusable Business Template using your business
+              Preview of the reusable Business Essentials using your business
               name.
             </p>
             <div
@@ -179,15 +198,14 @@ export default function CreateWebsiteWizard() {
               >
                 <WebsiteTemplate
                   content={createDefaultContent(values.businessName)}
+                  editorSection="template-preview"
                 />
               </div>
             </div>
-            <div
-              aria-disabled="true"
-              className="mt-5 rounded-xl border border-dashed border-slate-200 p-5 text-sm text-slate-400"
-            >
-              More templates - Coming Soon
-            </div>
+            <p className="mt-5 text-xs text-slate-500">
+              Add, reorder, hide, and customize sections in the editor after
+              creation.
+            </p>
           </>
         )}
         {step === 3 && (
@@ -197,7 +215,7 @@ export default function CreateWebsiteWizard() {
                 ["Business", values.businessName],
                 ["Website display name", values.name],
                 ["Industry", values.industry || "Not specified"],
-                ["Template", "Business Template"],
+                ["Template", "Business Essentials"],
                 ["Local URL", `/site/${values.slug}`],
                 [
                   "Draft preview after creation",
@@ -212,8 +230,8 @@ export default function CreateWebsiteWizard() {
               ))}
             </dl>
             <p className="mt-6 rounded-xl bg-[#F5FAFF] p-4 text-sm leading-6 text-slate-500">
-              Your new website is saved only in this browser. It starts with
-              editable default content. Creation does not publish or deploy it.
+              Your new website starts with editable default content. Save and
+              publish when it is ready.
             </p>
           </>
         )}
@@ -239,7 +257,7 @@ export default function CreateWebsiteWizard() {
             {step > 1 && (
               <button
                 type="button"
-                className="admin-secondary"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#06325E] hover:bg-slate-50"
                 disabled={busy}
                 onClick={() => setStep(step - 1)}
               >
@@ -248,7 +266,7 @@ export default function CreateWebsiteWizard() {
             )}
             <button
               type="submit"
-              className="admin-primary"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0879dc] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#06325E]"
               disabled={busy || Object.keys(errors).length > 0}
             >
               {busy

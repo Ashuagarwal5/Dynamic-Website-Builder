@@ -1,0 +1,13 @@
+# Backend website listing
+
+GET /tenants/{tenantId}/sites is integrated for Dashboard and My Websites. Browser requests use GET /api/tenants/{tenantId}/sites with readable JSON. The server keeps the bearer token private, verifies current active membership through GET /tenants, and calls the backend site-list endpoint.
+
+The selected backend branch supplies tenantId. List responses are validated for duplicate IDs, cross-tenant records, names/slugs/status, timestamps, and nullable domains. Only documented site metadata is sent to the browser. No draft content is invented. Unknown statuses are displayed as supplied; dashboard Draft counts include only DRAFT records.
+
+The screens fetch on mount, branch changes, and window focus. Focus refreshes share an in-flight request. Cleanup marks the loader as disposed rather than aborting fetch; late results and errors are ignored so they cannot update a different branch or trigger cleanup AbortErrors. Search, status filtering, sorting, grid/list display, and recent-site cards operate on the returned metadata. Loading, empty lists, missing branches, and retryable errors are handled without local-storage fallback.
+
+Creation now uses POST /tenants/{tenantId}/sites through the browser JSON endpoint POST /api/tenants/{tenantId}/sites. My Websites and Dashboard offer Create Website. The form collects only name and slug, validates input, verifies current backend membership, and sends only those fields. Errors retain form input; duplicate submissions are locked. Success navigates client-side to My Websites and refreshes the list without a document reload. An uncertain network result advises checking the list before retrying; creation is never retried automatically. Editing, settings, viewing, duplication, deletion, and publishing remain disabled until their backend integrations are available. Existing local website data remains preserved, but Dashboard and My Websites no longer list it. The old editor/public-preview implementation remains separate pending page/section integration.
+
+No backend payload changes are required for this GET endpoint. POST site creation is integrated with the existing name/slug payload. Automatic legacy website-storage migration was removed from SessionProvider; backend listing and creation never read/write local website collections. Legacy data is preserved. Business details/template selection need a documented storage contract before those fields can be persisted.
+
+Validation: npm run test:sites includes website-api.test.mjs for the service transport, membership isolation, safe JSON responses, empty lists, malformed responses, upstream failures, and status preservation. Existing local website tests remain for legacy compatibility.

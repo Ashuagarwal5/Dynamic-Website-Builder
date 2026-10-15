@@ -1,4 +1,5 @@
-﻿import CreateWebsiteWizard from "../../../../components/websites/CreateWebsiteWizard";
+import CreateBackendWebsiteForm from "../../../../components/websites/CreateBackendWebsiteForm";
 export default function NewWebsitePage() {
-  return <CreateWebsiteWizard />;
+  return <CreateBackendWebsiteForm />;
 }
+export const instant = false;

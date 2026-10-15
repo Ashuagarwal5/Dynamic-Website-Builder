@@ -1,4 +1,5 @@
 ﻿import { industries } from "../../lib/site-validation";
+import Dropdown from "../ui/Dropdown";
 export function FormField({ label, name, error, hint, multiline, ...props }) {
   const Control = multiline ? "textarea" : "input";
   return (
@@ -54,17 +55,21 @@ export default function WebsiteDetailsFields({
       })}
       <label className="block space-y-2">
         <span className="text-sm font-semibold">Industry (optional)</span>
-        <select
+        <Dropdown
+          aria-label="Industry (optional)"
           value={values.industry}
           disabled={disabled}
-          onChange={(event) => onChange("industry", event.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"
-        >
-          <option value="">Select an industry</option>
-          {industries.map((industry) => (
-            <option key={industry}>{industry}</option>
-          ))}
-        </select>
+          onChange={(value) => onChange("industry", value)}
+          className="w-full px-4 py-3"
+          aria-invalid={!!errors.industry}
+          options={[
+            { value: "", label: "Select an industry" },
+            ...industries.map((industry) => ({
+              value: industry,
+              label: industry,
+            })),
+          ]}
+        />
         {errors.industry && (
           <span className="text-xs text-red-700">{errors.industry}</span>
         )}

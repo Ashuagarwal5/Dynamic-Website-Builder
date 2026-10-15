@@ -2,3 +2,4 @@
 export default function WebsiteSettingsPage() {
   return <WebsiteSettingsForm />;
 }
+export const instant = false;

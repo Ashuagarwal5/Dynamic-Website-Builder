@@ -10,11 +10,13 @@ import WebsiteDetailsFields from "./WebsiteDetailsFields";
 import DeleteWebsiteDialog from "./DeleteWebsiteDialog";
 import ServiceError from "./ServiceError";
 import StatusBadge from "./StatusBadge";
+import { useSession } from "../auth/SessionProvider";
 export default function WebsiteSettingsForm() {
   const { slug } = useParams();
   return <SettingsContent key={slug} slug={slug} />;
 }
 function SettingsContent({ slug }) {
+  const scope = useSession()?.websiteScope;
   const router = useRouter(),
     search = useSearchParams();
   const [site, setSite] = useState(undefined),
@@ -41,13 +43,13 @@ function SettingsContent({ slug }) {
   }
   function load() {
     setLoadError(null);
-    Promise.all([getSite(slug), listSites()])
+    Promise.all([getSite(slug, scope), listSites(scope)])
       .then(apply)
       .catch(setLoadError);
   }
   useEffect(() => {
     let active = true;
-    Promise.all([getSite(slug), listSites()])
+    Promise.all([getSite(slug, scope), listSites(scope)])
       .then((data) => {
         if (active) apply(data);
       })
@@ -57,7 +59,7 @@ function SettingsContent({ slug }) {
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [slug, scope]);
   if (loadError) return <ServiceError error={loadError} onRetry={load} />;
   if (site === undefined) return <LoadingSkeleton />;
   if (!site) return <NotFoundState />;
@@ -70,7 +72,7 @@ function SettingsContent({ slug }) {
     setError(null);
     setSuccess(false);
     try {
-      const updated = await updateSiteSettings(slug, values);
+      const updated = await updateSiteSettings(slug, values, scope);
       if (updated.slug !== slug)
         router.replace(
           `/dashboard/websites/${encodeURIComponent(updated.slug)}/settings?saved=1`,
@@ -85,13 +87,13 @@ function SettingsContent({ slug }) {
       setError(problem);
       lock.current = false;
       setBusy(false);
-      listSites()
+      listSites(scope)
         .then(setSites)
         .catch(() => {});
     }
   }
   return (
-    <main className="mx-auto max-w-4xl">
+    <main className="w-full min-w-0">
       <Link
         href="/dashboard/websites"
         className="mb-6 inline-flex items-center gap-2 text-sm text-blue-700"
@@ -132,7 +134,7 @@ function SettingsContent({ slug }) {
         />
         <p className="mt-5 rounded-xl bg-[#F5FAFF] p-4 text-sm leading-6 text-slate-500">
           Changing a slug changes the local URL for this website, including its
-          published demo URL. The old URL will no longer find this website. No
+          published URL. The old URL will no longer find this website. No
           redirects or custom domains are configured. Business name and SEO
           changes stay in the draft until you publish from the editor. SEO
           metadata integration is Coming Soon.
@@ -147,20 +149,20 @@ function SettingsContent({ slug }) {
             role="status"
             className="mt-5 text-sm font-semibold text-emerald-700"
           >
-            Website settings saved in this browser.
+            Website settings saved.
           </p>
         )}
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <Link
             href={`/dashboard/sites/${encodeURIComponent(site.slug)}`}
-            className="admin-secondary"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#06325E] hover:bg-slate-50"
           >
             Open content editor
           </Link>
           <button
             type="submit"
             disabled={busy || Object.keys(errors).length > 0}
-            className="admin-primary"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0879dc] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#06325E]"
           >
             {busy ? "Saving..." : "Save settings"}
           </button>
@@ -169,7 +171,7 @@ function SettingsContent({ slug }) {
       <section className="mt-8 rounded-2xl border border-red-200 bg-white p-6">
         <h2 className="font-bold text-red-800">Delete website</h2>
         <p className="mt-2 text-sm text-slate-500">
-          Remove this website and its saved content from this browser.
+          Remove this website and its saved content.
         </p>
         <button
           type="button"

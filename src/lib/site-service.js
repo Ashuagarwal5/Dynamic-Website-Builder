@@ -3,11 +3,14 @@
   slugError,
   slugify,
   validateDetails,
+  validateContent,
+  createBusinessSections,
 } from "./site-validation";
 import { initialSites } from "./mock-sites";
 
 // Keep the Phase 1 key and array format so existing browser edits remain intact.
 const STORAGE_KEY = "dynamic-builder-sites-v1";
+const storageKey = (scope) => scope || STORAGE_KEY;
 const clone = (value) => {
   try {
     return JSON.parse(JSON.stringify(value));
@@ -41,9 +44,9 @@ function storage() {
     );
   }
 }
-function write(sites) {
+function write(sites, scope) {
   try {
-    storage().setItem(STORAGE_KEY, JSON.stringify(sites));
+    storage().setItem(storageKey(scope), JSON.stringify(sites));
   } catch (error) {
     if (error instanceof SiteServiceError) throw error;
     throw new SiteServiceError(
@@ -103,10 +106,10 @@ function contentValid(content) {
     )
   );
 }
-function read() {
+function read(scope) {
   let raw;
   try {
-    raw = storage().getItem(STORAGE_KEY);
+    raw = storage().getItem(storageKey(scope));
   } catch (error) {
     if (error instanceof SiteServiceError) throw error;
     throw new SiteServiceError(
@@ -115,12 +118,12 @@ function read() {
     );
   }
   if (raw === null) {
-    const seeded = clone(initialSites).map((site) => ({
+    const seeded = clone(scope ? [] : initialSites).map((site) => ({
       templateId: TEMPLATE_ID,
       industry: "",
       ...site,
     }));
-    write(seeded);
+    write(seeded, scope);
     return seeded;
   }
   let sites;
@@ -165,11 +168,11 @@ function read() {
   }));
 }
 let pendingMutation = Promise.resolve();
-function mutate(change) {
+function mutate(change, scope) {
   const result = pendingMutation.then(() => {
-    const sites = read();
+    const sites = read(scope);
     const value = change(sites);
-    write(sites);
+    write(sites, scope);
     return clone(value);
   });
   pendingMutation = result.catch(() => {});
@@ -207,6 +210,17 @@ export function createLocalId() {
 }
 export function createDefaultContent(businessName) {
   return {
+    sections: createBusinessSections(businessName),
+    header: {
+      links: [
+        { id: "nav-about", label: "About", url: "#about" },
+        { id: "nav-services", label: "Services", url: "#services" },
+        { id: "nav-faq", label: "FAQ", url: "#faq" },
+        { id: "nav-contact", label: "Contact", url: "#contact" },
+      ],
+      ctaLabel: "Get in touch",
+      ctaUrl: "#contact",
+    },
     businessName,
     logo: "",
     phone: "",
@@ -240,20 +254,20 @@ export function createDefaultContent(businessName) {
     seo: { title: businessName, description: "" },
   };
 }
-export async function listSites() {
+export async function listSites(scope) {
   await pendingMutation;
-  return clone(read());
+  return clone(read(scope));
 }
-export async function getSite(slug) {
-  return (await listSites()).find((site) => site.slug === slug) || null;
+export async function getSite(slug, scope) {
+  return (await listSites(scope)).find((site) => site.slug === slug) || null;
 }
-export async function isSlugAvailable(slug, excludeSiteId) {
+export async function isSlugAvailable(slug, excludeSiteId, scope) {
   if (slugError(slug)) return false;
-  return !(await listSites()).some(
+  return !(await listSites(scope)).some(
     (site) => site.slug === slug && site.id !== excludeSiteId,
   );
 }
-export async function createSite(payload) {
+export async function createSite(payload, scope) {
   return mutate((sites) => {
     const data = validated(payload, sites);
     if (data.templateId && data.templateId !== TEMPLATE_ID)
@@ -273,9 +287,9 @@ export async function createSite(payload) {
     };
     sites.push(site);
     return site;
-  });
+  }, scope);
 }
-export async function updateSiteSettings(slug, payload) {
+export async function updateSiteSettings(slug, payload, scope) {
   return mutate((sites) => {
     const site = requireSite(sites, slug);
     const data = validated(
@@ -307,9 +321,9 @@ export async function updateSiteSettings(slug, payload) {
       },
     });
     return site;
-  });
+  }, scope);
 }
-export async function duplicateSite(slug) {
+export async function duplicateSite(slug, scope) {
   return mutate((sites) => {
     const original = requireSite(sites, slug);
     const base = `${(slugify(original.slug) || "website").slice(0, 45).replace(/-+$/, "")}-copy`;
@@ -332,16 +346,16 @@ export async function duplicateSite(slug) {
     };
     sites.push(copy);
     return copy;
-  });
+  }, scope);
 }
-export async function deleteSite(slug) {
+export async function deleteSite(slug, scope) {
   return mutate((sites) => {
     const site = requireSite(sites, slug);
     sites.splice(sites.indexOf(site), 1);
     return { id: site.id, slug: site.slug };
-  });
+  }, scope);
 }
-export async function saveDraft(slug, draft) {
+export async function saveDraft(slug, draft, scope) {
   return mutate((sites) => {
     const site = requireSite(sites, slug);
     if (
@@ -353,27 +367,52 @@ export async function saveDraft(slug, draft) {
         "VALIDATION",
         "Draft needs a business name (up to 120 characters) and complete website content.",
       );
+    const fields = validateContent(draft);
+    if (Object.keys(fields).length)
+      throw new SiteServiceError(
+        "VALIDATION",
+        "Correct the draft content before saving.",
+        fields,
+      );
     Object.assign(site, {
       draft: clone(draft),
       updatedAt: new Date().toISOString(),
     });
     return site;
-  });
+  }, scope);
 }
-export async function publishSite(slug) {
+export async function publishSite(slug, scope) {
   return mutate((sites) => {
     const site = requireSite(sites, slug);
+    const fields = validateContent(site.draft);
+    if (Object.keys(fields).length)
+      throw new SiteServiceError(
+        "VALIDATION",
+        "Correct the draft content before publishing.",
+        fields,
+      );
     Object.assign(site, {
       published: true,
       live: clone(site.draft),
       updatedAt: new Date().toISOString(),
     });
     return site;
-  });
+  }, scope);
 }
-export async function exportSavedSites() {
+export async function unpublishSite(slug, scope) {
+  return mutate((sites) => {
+    const site = requireSite(sites, slug);
+    Object.assign(site, {
+      published: false,
+      live: null,
+      updatedAt: new Date().toISOString(),
+    });
+    return site;
+  }, scope);
+}
+export async function exportSavedSites(scope) {
   try {
-    return storage().getItem(STORAGE_KEY) ?? "[]";
+    return storage().getItem(storageKey(scope)) ?? "[]";
   } catch (error) {
     if (error instanceof SiteServiceError) throw error;
     throw new SiteServiceError(
