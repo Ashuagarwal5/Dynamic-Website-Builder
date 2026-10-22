@@ -36,7 +36,7 @@ export default function WebsiteTemplate({ content, editorSection }) {
         "--brand": primary,
         "--brand-dark": secondary,
         background: theme?.background || "#ffffff",
-        fontFamily: fonts[theme?.font] || fonts.sans,
+        fontFamily: theme?.fontFamily || fonts[theme?.font] || fonts.sans,
       }}
     >
       <header

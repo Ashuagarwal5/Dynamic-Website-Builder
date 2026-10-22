@@ -14,9 +14,19 @@ export function createTenant({ name, slug }) {
   });
 }
 
+export function updateTenant(tenantId, { name, slug }) {
+  if (typeof tenantId !== "string" || !tenantId) throw new Error("A tenant ID is required.");
+  return apiFetch(`/tenants/${encodeURIComponent(tenantId)}`, { method: "PATCH", body: JSON.stringify({ name, slug }) });
+}
+
+export function deleteTenant(tenantId) {
+  if (typeof tenantId !== "string" || !tenantId) throw new Error("A tenant ID is required.");
+  return apiFetch(`/tenants/${encodeURIComponent(tenantId)}`, { method: "DELETE" });
+}
+
 // Return only documented membership fields to browser consumers. Never fall
 // back to the login snapshot when the membership API cannot be verified.
-export async function getActiveTenants() {
+export async function getTenantMemberships() {
   const response = await listTenants();
   if (!response.ok) {
     const error = new Error("Unable to load branches. Please try again.");
@@ -48,7 +58,6 @@ export async function getActiveTenants() {
   )
     throw new Error("Unable to load branches. Please try again.");
   return data
-    .filter((tenant) => tenant.isActive)
     .map(({ id, name, slug, role, isActive }) => ({
       id,
       name,
@@ -56,6 +65,15 @@ export async function getActiveTenants() {
       role,
       isActive,
     }));
+}
+
+export async function getActiveTenants() {
+  return (await getTenantMemberships()).filter((tenant) => tenant.isActive);
+}
+
+export function setTenantStatus(tenantId, isActive) {
+  if (typeof tenantId !== "string" || !tenantId || typeof isActive !== "boolean") throw new Error("A tenant ID and boolean status are required.");
+  return apiFetch(`/tenants/${encodeURIComponent(tenantId)}/status`, { method: "PATCH", body: JSON.stringify({ isActive }) });
 }
 
 export async function requireActiveTenant() {

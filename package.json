@@ -12,7 +12,14 @@
     "test:tenants": "node --test tests/tenants.test.mjs tests/branch-management.test.mjs tests/tenant-service.test.mjs",
     "test:sites": "node --test tests/site-service.test.mjs tests/website-api.test.mjs tests/site-list-loader.test.mjs",
     "test:builder": "node --test tests/builder.test.mjs",
-    "test:pages": "node --test tests/page-api.test.mjs"
+    "test:pages": "node --test tests/page-api.test.mjs",
+    "test:sections": "node --test tests/section-api.test.mjs",
+    "test:theme": "node --test tests/theme-api.test.mjs",
+    "test:publishing": "node --test tests/publishing-api.test.mjs",
+    "test:remaining": "node --test tests/remaining-api.test.mjs",
+    "test:site-manage": "node --test tests/site-manage-api.test.mjs",
+    "test:template-flow": "node --test tests/template-flow.test.mjs",
+    "test:media": "node --test tests/media-upload.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.53.0",

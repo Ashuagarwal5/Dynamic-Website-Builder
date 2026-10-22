@@ -18,6 +18,7 @@ export default function SessionProvider({ session, children }) {
   }, [session.expiresAt]);
 
   const branches = backendBranches(session.tenants);
+  const allBranches = (session.allTenants || session.tenants).map((tenant) => ({ ...tenant, kind: "backend", key: `backend:${tenant.id}` }));
   const activeBranch = branches.find((branch) => branch.id === session.activeTenant?.id) || branches[0] || null;
   const scope = websiteScope(session.user.id, activeBranch?.kind || "none", activeBranch?.id || "none");
 
@@ -30,7 +31,7 @@ export default function SessionProvider({ session, children }) {
     if (result.error) throw new Error(result.error);
   }
 
-  return <SessionContext.Provider value={{ ...session, activeBranch, websiteScope: scope, branches, selectBranch }}>
+  return <SessionContext.Provider value={{ ...session, activeBranch, websiteScope: scope, branches, allBranches, selectBranch }}>
     <div key={scope}>{children}</div>
   </SessionContext.Provider>;
 }

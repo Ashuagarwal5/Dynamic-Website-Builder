@@ -2,15 +2,15 @@
 
 ## Current integration status
 
-`POST /auth/login`, `GET /tenants`, `POST /tenants`, `GET /tenants/{tenantId}/sites`, and `POST /tenants/{tenantId}/sites` are integrated with the backend. The login request remains `{ email, password }`, and its response remains `{ accessToken, user, tenants }`. `/auth/register` is visible in the supplied screenshot, but its request/response schema has not been supplied. Other supplied API contracts remain pending integration.
+`POST /auth/login`, `GET /tenants`, `POST /tenants`, `GET /tenants/{tenantId}/sites`, and `POST /tenants/{tenantId}/sites` are integrated with the backend. The login request remains `{ email, password }`, and its response remains `{ accessToken, user, tenants }`. `/auth/register`, `/auth/me`, page unpublish and `/public/sites/{subdomain}` are now integrated; see [Registration, current user, page unpublish, and public sites](backend-account-and-public.md).
 
 | Module | Responsibility | Status |
 | --- | --- | --- |
 | `src/services/auth.service.js` | Backend login and future registration | Login implemented; registration contract pending |
-| `src/services/theme.service.js` | Backend theme operations | Server-only integration point; contract pending |
+| `src/services/theme.service.js` | Backend theme operations | GET/PATCH site theme integrated |
 | `src/services/template.service.js` | Backend template operations | Server-only integration point; contract pending |
 | `src/services/website.service.js` | Backend website operations | GET/POST tenant sites integrated; editing pending |
-| `src/services/publishing.service.js` | Backend publish/unpublish | Server-only integration point; contract pending |
+| `src/services/publishing.service.js` | Backend publish/unpublish | Website publish/unpublish and page publish integrated |
 | `src/services/media.service.js` | Backend media operations | Server-only integration point; contract pending |
 | `src/services/tenant.service.js` | Authorized active tenant context and future branch APIs | GET /tenants, POST /tenants, and current membership checks implemented |
 
@@ -47,3 +47,13 @@ Run `npm run test:api` for transport and authentication service checks, and `npm
 Website listing now uses backend JSON only; see [Backend website listing](backend-sites.md). Dashboard/My Websites no longer read local website collections. Site creation uses backend POST with name/slug; other unsupported site actions are disabled pending their own integrations.
 
 Page listing is integrated through GET /tenants/{tenantId}/sites/{siteId}/pages and a browser JSON route. See [Backend page listing](backend-pages.md). Page creation now uses POST on the same browser JSON route with name/slug and refreshes the list in place; page editing remains separate.
+
+Section listing is integrated via GET /tenants/{tenantId}/sites/{siteId}/pages/{pageId}/sections. The Sections action uses a browser JSON route and backend data only. See [Backend sections](backend-sections.md).
+
+Tenant editing is integrated through PATCH /tenants/{tenantId} with { name, slug }, via browser PATCH /api/tenants/{tenantId}. Edit actions use backend data only. Tenant status changes are integrated via PATCH /tenants/{tenantId}/status; tenant deletion is integrated via DELETE /tenants/{tenantId}.
+
+Website theme reads are integrated; Settings now displays backend theme data instead of the old local settings form. See [Backend theme](backend-theme.md).
+
+Theme updates are integrated via PATCH /tenants/{tenantId}/sites/{siteId}/theme with the five documented fields. Settings editing uses backend data only.
+
+Website publishing now calls the backend through a browser JSON route. See [Backend publishing](backend-publishing.md).

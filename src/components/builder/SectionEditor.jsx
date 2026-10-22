@@ -6,6 +6,7 @@ import { EditorField, ColorField } from "./fields/EditorField";
 import ImagePicker from "./fields/ImagePicker";
 import Dropdown from "../ui/Dropdown";
 import TemplateSectionEditor from "./TemplateSectionEditor";
+import { fontOptions, radiusOptions } from "../../lib/section-config";
 export default function SectionEditor({ editor }) {
   const { draft, section, change, validation, site } = editor;
   const get = (path) =>
@@ -238,7 +239,43 @@ export default function SectionEditor({ editor }) {
           </p>
         </>
       )}
-      {section === "theme" && (
+      {section === "theme" && draft.backendManaged && (
+        <>
+          {["primary", "secondary", "accent"].map((key) => (
+            <ColorField
+              key={key}
+              label={`${key[0].toUpperCase()}${key.slice(1)} color`}
+              value={draft.theme[key]}
+              error={validation[`theme.${key}`]}
+              onChange={(value) => change(`theme.${key}`, value)}
+            />
+          ))}
+          <label className="block space-y-2">
+            <span className="text-xs font-semibold">Typography</span>
+            <Dropdown
+              aria-label="Typography"
+              value={draft.theme.fontFamily}
+              onChange={(value) => change("theme.fontFamily", value)}
+              className="w-full"
+              options={[...new Set([draft.theme.fontFamily, ...fontOptions])].map((font) => ({ value: font, label: font }))}
+            />
+          </label>
+          <label className="block space-y-2">
+            <span className="text-xs font-semibold">Corner radius</span>
+            <Dropdown
+              aria-label="Corner radius"
+              value={draft.theme.borderRadius}
+              onChange={(value) => change("theme.borderRadius", value)}
+              className="w-full"
+              options={[...new Set([draft.theme.borderRadius, ...radiusOptions])].map((radius) => ({ value: radius, label: radius }))}
+            />
+          </label>
+          <p className="text-xs leading-5 text-slate-500">
+            Colors, font and corner radius are saved to your website theme.
+          </p>
+        </>
+      )}
+      {section === "theme" && !draft.backendManaged && (
         <>
           {field("businessName", "Business name", { maxLength: 120 })}
           {image("logo", "Logo")}

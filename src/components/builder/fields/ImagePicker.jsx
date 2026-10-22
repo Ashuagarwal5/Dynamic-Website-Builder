@@ -2,6 +2,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { readLocalImage } from "../../../lib/media-service";
+import { validateUploadFile } from "../../../lib/media-upload";
+import { useMediaUpload } from "./MediaUploadContext";
 import { safeLink } from "../../../lib/site-validation";
 import { EditorField } from "./EditorField";
 export function ImagePreview({ value, label }) {
@@ -31,6 +33,7 @@ export default function ImagePicker({
   error,
   beginMedia,
 }) {
+  const upload = useMediaUpload();
   const id = useId(),
     input = useRef(null),
     generation = useRef(0),
@@ -55,7 +58,14 @@ export default function ImagePicker({
     setReading(true);
     setProblem("");
     try {
-      const data = await readLocalImage(file);
+      // With a backend upload available the file is uploaded and only its URL
+      // is saved; otherwise it is read as a local data URL.
+      let data;
+      if (upload) {
+        const invalid = validateUploadFile(file);
+        if (invalid) throw new Error(invalid);
+        data = await upload(file);
+      } else data = await readLocalImage(file);
       if (request === generation.current) onChange(data);
     } catch (issue) {
       if (request === generation.current) setProblem(issue.message);
@@ -87,7 +97,9 @@ export default function ImagePicker({
         >
           <ImagePlus size={14} />
           {reading
-            ? "Reading image..."
+            ? upload
+              ? "Uploading image..."
+              : "Reading image..."
             : value
               ? "Replace image"
               : "Choose image"}
@@ -126,8 +138,9 @@ export default function ImagePicker({
         error={error}
       />
       <p className="text-[11px] leading-5 text-slate-500">
-        JPEG, PNG, WebP. Maximum 256 KB. Local images stay in this browser and
-        are persisted when you save.
+        {upload
+          ? "JPEG, PNG, WebP. Maximum 5 MB. The image is uploaded when you choose it; the website keeps only its link."
+          : "JPEG, PNG, WebP. Maximum 256 KB. Local images stay in this browser and are persisted when you save."}
       </p>
       {problem && (
         <p role="alert" className="text-xs text-red-700">

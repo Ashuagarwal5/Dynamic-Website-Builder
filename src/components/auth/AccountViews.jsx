@@ -5,8 +5,9 @@ import { Settings, ShieldCheck, UserRound } from "lucide-react";
 import { useSession } from "./SessionProvider";
 import { logout } from "../../app/login/actions";
 
-export function ProfileView() {
+export function ProfileView({ account }) {
   const session = useSession();
+  const user = { ...session?.user, ...account };
   return (
     <main className="space-y-6">
       <div>
@@ -27,13 +28,13 @@ export function ProfileView() {
             <div>
               <dt className="text-xs text-slate-500">Name</dt>
               <dd className="mt-1 break-words font-semibold">
-                {session?.user.name || "Not provided"}
+                {user.name || "Not provided"}
               </dd>
             </div>
             <div>
               <dt className="text-xs text-slate-500">Email address</dt>
               <dd className="mt-1 break-all font-semibold">
-                {session?.user.email}
+                {user.email}
               </dd>
             </div>
           </dl>

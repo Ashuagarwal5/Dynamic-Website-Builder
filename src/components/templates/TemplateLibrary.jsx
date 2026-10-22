@@ -90,7 +90,7 @@ export default function TemplateLibrary({ templateSections = [] }) {
           </div>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
-              href="/dashboard/websites/new"
+              href="/dashboard/websites/new?template=business-essentials"
               className="inline-flex items-center gap-2 rounded-lg bg-[#0879dc] px-5 py-3 text-sm font-semibold text-white hover:bg-[#06325E]"
             >
               Use template

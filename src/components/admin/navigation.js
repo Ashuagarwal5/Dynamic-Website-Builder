@@ -11,7 +11,7 @@ export const navigation = [
   { label: "My Websites", href: "/dashboard/websites", icon: Globe },
   { label: "Branches", href: "/dashboard/tenants", icon: Building2 },
   { label: "Templates", href: "/dashboard/templates", icon: PanelsTopLeft },
-  { label: "Media Library", icon: Images },
+  // { label: "Media Library", icon: Images },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 export function pageLabel(path) {

@@ -4,7 +4,7 @@ import { LoadingSkeleton } from "../../components/admin/States";
 import { requireSession } from "../../lib/auth";
 import SessionProvider from "../../components/auth/SessionProvider";
 import { resolveActiveTenant } from "../../lib/tenant-context";
-import { getActiveTenants } from "../../services/tenant.service";
+import { getTenantMemberships } from "../../services/tenant.service";
 import { redirect } from "next/navigation";
 
 // Website screens still load scoped browser data until their API integration.
@@ -14,9 +14,9 @@ export const instant = false;
 async function AuthenticatedDashboard({ children }) {
   const session = await requireSession();
   const { user, expiresAt } = session;
-  let tenants;
+  let allTenants;
   try {
-    tenants = await getActiveTenants();
+    allTenants = await getTenantMemberships();
   } catch (error) {
     if (error.status === 401) redirect("/login");
     return (
@@ -31,9 +31,10 @@ async function AuthenticatedDashboard({ children }) {
       </main>
     );
   }
+  const tenants = allTenants.filter((tenant) => tenant.isActive);
   const activeTenant = resolveActiveTenant({ ...session, tenants });
   return (
-    <SessionProvider session={{ user, tenants, expiresAt, activeTenant }}>
+    <SessionProvider session={{ user, tenants, allTenants, expiresAt, activeTenant }}>
       <DashboardFrame>{children}</DashboardFrame>
     </SessionProvider>
   );

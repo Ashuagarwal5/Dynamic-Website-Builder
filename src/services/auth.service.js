@@ -11,5 +11,20 @@ export function loginUser({ email, password }) {
   });
 }
 
-// Registration: POST /auth/register is known, but its payload and response
-// contract have not been supplied. Add registerUser once those are confirmed.
+export function registerUser({ name, email, password, tenantName, tenantSlug }) {
+  return apiFetch("/auth/register", {
+    authenticated: false,
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      email,
+      password,
+      ...(tenantName ? { tenantName } : {}),
+      ...(tenantSlug ? { tenantSlug } : {}),
+    }),
+  });
+}
+
+export function getCurrentUser() {
+  return apiFetch("/auth/me", { method: "GET" });
+}

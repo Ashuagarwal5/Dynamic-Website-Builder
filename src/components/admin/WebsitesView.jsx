@@ -9,6 +9,9 @@ import { LoadingSkeleton } from "./States";
 import WebsiteFilters from "../websites/WebsiteFilters";
 import { useSession } from "../auth/SessionProvider";
 import { useTenantSites } from "../../hooks/useTenantSites";
+import PublishBackendWebsiteDialog from "../websites/PublishBackendWebsiteDialog";
+import EditBackendWebsiteDialog from "../websites/EditBackendWebsiteDialog";
+import DeleteBackendWebsiteDialog from "../websites/DeleteBackendWebsiteDialog";
 
 export default function WebsitesView({ overview = false }) {
   const session = useSession();
@@ -20,6 +23,9 @@ export default function WebsitesView({ overview = false }) {
   const [filter, setFilter] = useState("all");
   const [layout, setLayout] = useState("grid");
   const [sort, setSort] = useState("recent");
+  const [publishing, setPublishing] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   if (!tenantId) return <main className="rounded-2xl border border-slate-200 bg-white p-8"><h1 className="text-2xl font-bold">Choose a branch</h1><p className="mt-3 text-sm text-slate-500">Create or select a branch to view its websites.</p><Link href="/dashboard/tenants" className="mt-5 inline-block font-semibold text-blue-600">Manage branches</Link></main>;
   if (error) return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800"><p>{error.message}</p><button type="button" onClick={reload} className="mt-4 rounded-lg border border-red-200 bg-white px-4 py-2 font-semibold">Retry</button></div>;
   if (!sites) return <LoadingSkeleton />;
@@ -41,6 +47,9 @@ export default function WebsitesView({ overview = false }) {
       <div className="mb-6 flex items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Recent websites</h2><p className="mt-1 text-sm text-slate-500">Your three most recently updated websites.</p></div><Link href="/dashboard/websites" className="text-sm font-semibold text-blue-600">View all</Link></div>
     </>}
     {!overview && <><WebsiteFilters query={query} onQuery={(value) => router.replace(`/dashboard/websites?q=${encodeURIComponent(value)}`, { scroll: false })} filter={filter} onFilter={setFilter} sort={sort} onSort={setSort} layout={layout} onLayout={setLayout} /><p aria-live="polite" className="mb-4 text-xs text-slate-500">{visible.length} {visible.length === 1 ? "website" : "websites"}</p></>}
-    {!visible.length ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><Globe size={32} className="mx-auto text-blue-500" aria-hidden="true" /><h2 className="mt-4 text-xl font-bold">{sites.length ? "No matching websites" : "No websites yet"}</h2><p className="mt-2 text-sm text-slate-500">{sites.length ? "Try another search or status filter." : "This branch has no websites."}</p></div> : <div className={layout === "list" && !overview ? "grid gap-4" : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"}>{visible.map((site) => <BackendWebsiteCard key={site.id} site={site} list={layout === "list" && !overview} />)}</div>}
+    {!visible.length ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><Globe size={32} className="mx-auto text-blue-500" aria-hidden="true" /><h2 className="mt-4 text-xl font-bold">{sites.length ? "No matching websites" : "No websites yet"}</h2><p className="mt-2 text-sm text-slate-500">{sites.length ? "Try another search or status filter." : "This branch has no websites."}</p></div> : <div className={layout === "list" && !overview ? "grid gap-4" : "grid gap-5 md:grid-cols-2 xl:grid-cols-3"}>{visible.map((site) => <BackendWebsiteCard key={site.id} site={site} list={layout === "list" && !overview} onPublish={setPublishing} onEdit={setEditing} onDelete={setDeleting} />)}</div>}
+    {editing && editing.tenantId === tenantId && <EditBackendWebsiteDialog key={editing.id} site={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
+    {deleting && deleting.tenantId === tenantId && <DeleteBackendWebsiteDialog key={deleting.id} site={deleting} onClose={() => setDeleting(null)} onDeleted={() => { setDeleting(null); reload(); }} />}
+    {publishing && publishing.tenantId === tenantId && <PublishBackendWebsiteDialog key={publishing.id} site={publishing} onClose={() => setPublishing(null)} onPublished={() => { setPublishing(null); reload(); }} />}
   </main>;
 }

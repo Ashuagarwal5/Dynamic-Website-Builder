@@ -22,6 +22,8 @@ export default function BuilderToolbar({
   onUnpublish,
 }) {
   const working = editor.busy || editor.mediaPending > 0;
+  // Backend websites have no separate draft copy: saving a published site updates it.
+  const live = Boolean(editor.backend && editor.site.published);
   const scope = useSession()?.websiteScope;
   const invalid = Object.keys(editor.validation).length > 0;
   return (
@@ -38,7 +40,7 @@ export default function BuilderToolbar({
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-bold">{editor.site.name}</h1>
           <p className="truncate text-[11px] text-slate-500">
-            /site/{editor.site.slug}
+            {editor.displayPath ?? `/site/${editor.site.slug}`}
           </p>
         </div>
         <StatusBadge published={editor.site.published} />
@@ -46,7 +48,11 @@ export default function BuilderToolbar({
           className={`text-[11px] font-medium ${editor.dirty ? "text-amber-700" : "text-slate-400"}`}
           role="status"
         >
-          {editor.dirty ? "Unsaved changes" : "Draft up to date"}
+          {editor.dirty
+            ? "Unsaved changes"
+            : live
+              ? "Saved and live"
+              : "Draft up to date"}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -81,7 +87,8 @@ export default function BuilderToolbar({
           disabled={working}
           onClick={() =>
             onExit(
-              `/dashboard/websites/${encodeURIComponent(editor.site.slug)}/settings`,
+              editor.settingsUrl ??
+                `/dashboard/websites/${encodeURIComponent(editor.site.slug)}/settings`,
             )
           }
         >
@@ -96,16 +103,28 @@ export default function BuilderToolbar({
         >
           <RotateCcw size={17} />
         </button>
-        <a
-          href={siteViewUrl(editor.site.slug, true, scope)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#06325E] hover:bg-slate-50"
-          title="Opens the saved draft only. The canvas includes unsaved changes."
-        >
-          <Eye size={15} />
-          Saved preview
-        </a>
+        {(editor.liveUrl !== undefined
+          ? editor.liveUrl
+          : siteViewUrl(editor.site.slug, true, scope)) && (
+          <a
+            href={
+              editor.liveUrl !== undefined
+                ? editor.liveUrl
+                : siteViewUrl(editor.site.slug, true, scope)
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#06325E] hover:bg-slate-50"
+            title={
+              editor.liveUrl !== undefined
+                ? "Opens the published website."
+                : "Opens the saved draft only. The canvas includes unsaved changes."
+            }
+          >
+            <Eye size={15} />
+            {editor.liveUrl !== undefined ? "View live" : "Saved preview"}
+          </a>
+        )}
         <button
           type="button"
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#06325E] hover:bg-slate-50"
@@ -113,17 +132,19 @@ export default function BuilderToolbar({
           onClick={editor.save}
         >
           <Save size={15} />
-          {working ? "Working..." : "Save Draft"}
+          {working ? "Working..." : live ? "Save changes" : "Save Draft"}
         </button>
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0879dc] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#06325E]"
-          disabled={working || invalid}
-          onClick={onPublish}
-        >
-          <Send size={15} />
-          {editor.site.published ? "Update published site" : "Publish"}
-        </button>
+        {!live && (
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0879dc] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#06325E]"
+            disabled={working || invalid}
+            onClick={onPublish}
+          >
+            <Send size={15} />
+            {editor.site.published ? "Update published site" : "Publish"}
+          </button>
+        )}
         {editor.site.published && (
           <button
             type="button"

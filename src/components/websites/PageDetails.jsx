@@ -6,21 +6,21 @@ export default function PageDetails({ tenantId, siteId, pageId, onClose }) {
   const [result, setResult] = useState(null);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
-    const controller = new AbortController();
     let active = true;
     async function load() {
       try {
-        const response = await fetch(`/api/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(siteId)}/pages/${encodeURIComponent(pageId)}`, { headers: { Accept: "application/json" }, cache: "no-store", signal: controller.signal });
+        const response = await fetch(`/api/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(siteId)}/pages/${encodeURIComponent(pageId)}`, { headers: { Accept: "application/json" }, cache: "no-store" });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Unable to load page details.");
         const page = parsePageDetails(data, siteId, pageId);
         if (active) setResult({ tenantId, siteId, pageId, revision, page });
       } catch (error) {
-        if (active && !controller.signal.aborted) setResult({ tenantId, siteId, pageId, revision, error: error.message });
+        if (active) setResult({ tenantId, siteId, pageId, revision, error: error.message });
       }
     }
     load();
-    return () => { active = false; controller.abort(); };
+    // Closing the panel invalidates results without generating an AbortError.
+    return () => { active = false; };
   }, [tenantId, siteId, pageId, revision]);
   const current = result?.tenantId === tenantId && result?.siteId === siteId && result?.pageId === pageId && result?.revision === revision ? result : null;
   return <section id="page-details" aria-labelledby="page-details-title" className="rounded-2xl border border-slate-200 bg-white p-6">

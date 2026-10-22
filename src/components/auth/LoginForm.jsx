@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { ArrowRight, Eye, EyeOff, Layers, LoaderCircle } from "lucide-react";
 import { login } from "../../app/login/actions";
@@ -98,6 +99,12 @@ export default function LoginForm({ returnTo }) {
               )}
             </button>
           </form>
+          <p className="mt-6 text-center text-sm text-slate-500">
+            New here?{" "}
+            <Link href="/register" className="font-semibold text-blue-600">
+              Create an account
+            </Link>
+          </p>
         </section>
         <p className="mt-6 text-center text-xs text-slate-500">
           Your websites. Your workspace. One place.

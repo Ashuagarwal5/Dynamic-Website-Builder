@@ -13,10 +13,19 @@ import {
   List,
 } from "lucide-react";
 import { useSession } from "../auth/SessionProvider";
+import EditBackendBranchDialog from "./EditBackendBranchDialog";
+import BranchStatusDialog from "./BranchStatusDialog";
+import DeleteBackendBranchDialog from "./DeleteBackendBranchDialog";
 
 export default function TenantsView() {
   const session = useSession();
+  const branches = session.allBranches || session.branches;
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const [statusBranch, setStatusBranch] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deleted, setDeleted] = useState(false);
   const [view, setView] = useState("table");
   const [pending, startTransition] = useTransition();
   const activeKey = session.activeBranch
@@ -53,6 +62,8 @@ export default function TenantsView() {
           Create branch
         </Link>
       </div>
+      {deleted && <p role="status" className="text-sm text-emerald-700">Branch deleted successfully.</p>}
+      {saved && <p role="status" className="text-sm text-emerald-700">Branch updated successfully.</p>}
       {error && (
         <p role="alert" className="text-sm text-red-600">
           {error}
@@ -63,12 +74,12 @@ export default function TenantsView() {
           Switching branch...
         </p>
       )}
-      {session.branches.length ? (
+      {branches.length ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-slate-500">
-              {session.branches.length}{" "}
-              {session.branches.length === 1 ? "branch" : "branches"}. Each
+              {branches.length}{" "}
+              {branches.length === 1 ? "branch" : "branches"}. Each
               branch has its own websites.
             </p>
             <div
@@ -112,6 +123,7 @@ export default function TenantsView() {
                       "Slug",
                       "Location",
                       "Role",
+                      "Status",
                       "Switch branch",
                       "Actions",
                     ].map((label) => (
@@ -126,7 +138,7 @@ export default function TenantsView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {session.branches.map((branch) => {
+                  {branches.map((branch) => {
                     const active = branch.key === activeKey;
                     return (
                       <tr
@@ -157,6 +169,7 @@ export default function TenantsView() {
                         <td className="px-5 py-4 text-slate-500">
                           {branch.role || "—"}
                         </td>
+                        <td className="px-5 py-3"><button type="button" role="switch" aria-checked={branch.isActive} aria-label={`Enable branch ${branch.name}`} disabled={pending} onClick={() => setStatusBranch(branch)} title={branch.isActive ? "Deactivate branch" : "Activate branch"} className={`inline-flex h-6 w-11 items-center rounded-full p-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500 ${branch.isActive ? "bg-emerald-500" : "bg-slate-300"}`}><span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${branch.isActive ? "translate-x-5" : "translate-x-0"}`} /></button></td>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-3">
                             <button
@@ -164,8 +177,8 @@ export default function TenantsView() {
                               role="switch"
                               aria-checked={active}
                               aria-label={`Use ${branch.name} as active branch`}
-                              aria-disabled={active || pending}
-                              disabled={pending}
+                              aria-disabled={active || pending || !branch.isActive}
+                              disabled={pending || !branch.isActive}
                               title={
                                 active
                                   ? "Current branch. Select another branch to switch."
@@ -186,18 +199,16 @@ export default function TenantsView() {
                           <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              disabled
-                              aria-label={`Edit branch ${branch.name}`}
-                              title="Branch editing is not available yet"
+                              disabled={pending || !branch.isActive} onClick={() => { setSaved(false); setEditing(branch); }} aria-label={`Edit branch ${branch.name}`}
+                              title="Edit branch"
                               className="inline-flex size-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-50"
                             >
                               <Pencil size={17} aria-hidden="true" />
                             </button>
                             <button
                               type="button"
-                              disabled
-                              aria-label={`Delete branch ${branch.name}`}
-                              title="Branch deletion is not available yet"
+                              disabled={pending} onClick={() => { setDeleted(false); setSaved(false); setDeleting(branch); }} aria-label={`Delete branch ${branch.name}`}
+                              title="Delete branch"
                               className="inline-flex size-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-red-500 disabled:opacity-50"
                             >
                               <Trash2 size={17} aria-hidden="true" />
@@ -212,7 +223,7 @@ export default function TenantsView() {
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {session.branches.map((branch) => {
+              {branches.map((branch) => {
                 const active = branch.key === activeKey;
                 return (
                   <article
@@ -260,7 +271,7 @@ export default function TenantsView() {
                       ) : (
                         <button
                           type="button"
-                          disabled={pending}
+                          disabled={pending || !branch.isActive}
                           onClick={() => activate(branch.key)}
                           className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
                         >
@@ -268,21 +279,20 @@ export default function TenantsView() {
                         </button>
                       )}
                     </div>
-                    <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
+                    <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                      <button type="button" disabled={pending} onClick={() => setStatusBranch(branch)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">{branch.isActive ? "Deactivate" : "Activate"}</button>
                       <button
                         type="button"
-                        disabled
-                        aria-label={`Edit branch ${branch.name}`}
-                        title="Branch editing is not available yet" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={pending || !branch.isActive} onClick={() => { setSaved(false); setEditing(branch); }} aria-label={`Edit branch ${branch.name}`}
+                        title="Edit branch" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Pencil size={14} aria-hidden="true" />
                         Edit branch
                       </button>
                       <button
                         type="button"
-                        disabled
-                        aria-label={`Delete branch ${branch.name}`}
-                        title="Branch deletion is not available yet" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={pending} onClick={() => { setDeleted(false); setSaved(false); setDeleting(branch); }} aria-label={`Delete branch ${branch.name}`}
+                        title="Delete branch" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Trash2 size={14} aria-hidden="true" />
                         Delete
@@ -315,6 +325,9 @@ export default function TenantsView() {
           </Link>
         </div>
       )}
+      {editing && <EditBackendBranchDialog key={editing.id} branch={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setSaved(true); }} />}
+      {statusBranch && <BranchStatusDialog key={`status:${statusBranch.id}`} branch={statusBranch} selected={statusBranch.key === activeKey} onClose={() => setStatusBranch(null)} onSaved={() => setStatusBranch(null)} />}
+      {deleting && <DeleteBackendBranchDialog key={`delete:${deleting.id}`} branch={deleting} selected={deleting.key === activeKey} onClose={() => setDeleting(null)} onDeleted={() => { setDeleting(null); setDeleted(true); }} />}
     </main>
   );
 }

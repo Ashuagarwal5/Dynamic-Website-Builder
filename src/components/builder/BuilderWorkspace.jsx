@@ -11,11 +11,14 @@ import PreviewCanvas from "./PreviewCanvas";
 import BuilderDialog from "./BuilderDialog";
 export default function BuilderWorkspace() {
   const { slug } = useParams();
-  return <Workspace key={slug} slug={slug} />;
+  return <LocalWorkspace key={slug} slug={slug} />;
 }
-function Workspace({ slug }) {
-  const editor = useWebsiteEditor(slug),
-    router = useRouter();
+function LocalWorkspace({ slug }) {
+  return <Workspace editor={useWebsiteEditor(slug)} />;
+}
+// Shared builder UI; the editor object comes from the local or the backend hook.
+export function Workspace({ editor }) {
+  const router = useRouter();
   const [tab, setTab] = useState("edit"),
     [collapsed, setCollapsed] = useState(false),
     [dialog, setDialog] = useState(null);
@@ -73,7 +76,9 @@ function Workspace({ slug }) {
             : editor.status ||
               (editor.dirty
                 ? "Changes are only in the live canvas until you save."
-                : "Editing your saved draft. Publish when your changes are ready.")}
+                : editor.backend && editor.site.published
+                  ? "This website is live. Changes go live as soon as you save."
+                  : "Editing your saved draft. Publish when your changes are ready.")}
         </span>
         {errors.length > 0 && (
           <details className="max-w-full text-red-700">
